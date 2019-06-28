@@ -38,5 +38,7 @@ def numerolog (string):
     return one_sum,two_sum,main_sum;
 
 numbers=numerolog(sys.argv[1:])
-print(list(numbers))
+if len(sys.argv[1:]) == 0:
+    print("Kelime ya da Harf Girin")
+    exit(1)
 print("Girdiğniz Kelime=%s\nAna Toplam=%s\nİki Rakamlı Sonuç=%s\nTek Rakamlı Sonuç=%s" % (' '.join(sys.argv[1:]),numbers[2],numbers[1],numbers[0]))
