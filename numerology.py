@@ -39,4 +39,4 @@ def numerolog (string):
 
 numbers=numerolog(sys.argv[1:])
 print(list(numbers))
-print("Girdiğniz Kelime=%s\nAna Toplam=%s\nİki Rakamlı Sonuç=%s\nTek Rakamlı Sonuç=%s" % (''.join(sys.argv[1:]),numbers[2],numbers[1],numbers[0]))
+print("Girdiğniz Kelime=%s\nAna Toplam=%s\nİki Rakamlı Sonuç=%s\nTek Rakamlı Sonuç=%s" % (' '.join(sys.argv[1:]),numbers[2],numbers[1],numbers[0]))
