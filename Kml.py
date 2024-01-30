@@ -1,292 +1,142 @@
-import pandas as pd
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
 from pandas import read_csv
-from sys import argv
+import calendar
+from datetime import date
 
-class KmlCreate:
-    def __init__(self):
-        self.begin_kml = """
-<kml>
-    <Document>
-        <name></name>
-        <visibility>0</visibility>
-        <open>0</open>
-        <Style id="ZERO_TO_ONE">
-            <IconStyle>
-                <scale>0.2</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="ZERO_TO_ONE_HL">
-            <IconStyle>
-                <scale>0.29</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="TWO">
-            <IconStyle>
-                <scale>0.3</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="TWO_HL">
-            <IconStyle>
-                <scale>0.39</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="THREE">
-            <IconStyle>
-                <color>ff0295f0</color>
-                <scale>0.5</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="THREE_HL">
-            <IconStyle>
-                <color>ff0295f0</color>
-                <scale>0.59</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-         <Style id="FOUR">
-            <IconStyle><color>ff00ff00</color>
-                <scale>0.7</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="FOUR_HL">
-            <IconStyle>
-                <color>ff00ff00</color>
-                <scale>0.79</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="FIVE">
-            <IconStyle>
-                <color>ffffaa00</color>
-                <scale>0.8</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="FIVE_HL">
-            <IconStyle>
-                <color>ffffaa00</color>
-                <scale>0.89</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="SIX">
-            <IconStyle>
-                <color>ff7f0000</color>
-                <scale>0.9</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="SIX_HL">
-            <IconStyle>
-                <color>ff7f0000</color>
-                <scale>0.99</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="SEVEN">
-            <IconStyle>
-                <color>ff0000ff</color>
-                <scale>1.0</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="SEVEN_HL">
-            <IconStyle>
-                <color>ff0000ff</color>
-                <scale>1.09</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="EIGHT">
-            <IconStyle>
-                <color>ff0000ff</color>
-                <scale>1.2</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="EIGHT_HL">
-            <IconStyle>
-                <color>ff0000ff</color>
-                <scale>1.29</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="NINE">
-            <IconStyle>
-                <color>ff0000ff</color>
-                <scale>1.4</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <Style id="NINE_HL">
-            <IconStyle>
-                <color>ff0000ff</color>
-                <scale>1.49</scale>
-                <Icon><href>http://maps.google.com/mapfiles/kml/pal2/icon18.png</href></Icon>
-            </IconStyle>
-            <LabelStyle><color>00ffffff</color></LabelStyle>
-        </Style>
-        <StyleMap id="0-1">
-            <Pair>
-                <key>normal</key>
-                <styleUrl>#ZERO_TO_ONE</styleUrl>
-            </Pair>
-            <Pair>
-                <key>highlight</key>
-                <styleUrl>#ZERO_TO_ONE_HL</styleUrl>
-            </Pair>
-        </StyleMap>
-        <StyleMap id="2">
-            <Pair>
-                <key>normal</key>
-                <styleUrl>#TWO</styleUrl>
-            </Pair>
-            <Pair>
-                <key>highlight</key>
-                <styleUrl>#TWO_HL</styleUrl>
-            </Pair>
-        </StyleMap>
-        <StyleMap id="3">
-            <Pair>
-                <key>normal</key>
-                <styleUrl>#THREE</styleUrl>
-            </Pair>
-            <Pair>
-                <key>highlight</key>
-                <styleUrl>#THREE_HL</styleUrl>
-            </Pair>
-        </StyleMap>
-        <StyleMap id="4">
-            <Pair>
-                <key>normal</key>
-                <styleUrl>#FOUR</styleUrl>
-            </Pair><Pair>
-                <key>highlight</key>
-                <styleUrl>#FOUR_HL</styleUrl>
-            </Pair>
-        </StyleMap>
-        <StyleMap id="5">
-            <Pair>
-                <key>normal</key>
-                <styleUrl>#FIVE</styleUrl>
-            </Pair>
-            <Pair>
-                <key>highlight</key>
-                <styleUrl>#FIVE_HL</styleUrl>
-            </Pair>
-        </StyleMap>
-        <StyleMap id="6">
-            <Pair>
-                <key>normal</key>
-                <styleUrl>#SIX</styleUrl>
-            </Pair>
-            <Pair>
-                <key>highlight</key>
-                <styleUrl>#SIX_HL</styleUrl>
-            </Pair>
-        </StyleMap>
-        <StyleMap id="7">
-            <Pair>
-                <key>normal</key>
-                <styleUrl>#SEVEN</styleUrl>
-            </Pair>
-            <Pair>
-                <key>highlight</key>
-                <styleUrl>#SEVEN_HL</styleUrl>
-            </Pair>
-        </StyleMap>
-        <StyleMap id="8">
-            <Pair>
-                <key>normal</key>
-                <styleUrl>#EIGHT</styleUrl>
-            </Pair>
-            <Pair>
-                <key>highlight</key>
-                <styleUrl>#EIGHT_HL</styleUrl>
-            </Pair>
-        </StyleMap>
-        <StyleMap id="9">
-            <Pair>
-                <key>normal</key>
-                <styleUrl>#NINE</styleUrl>
-            </Pair>
-            <Pair>
-                <key>highlight</key>
-                <styleUrl>#NINE_HL</styleUrl>
-            </Pair>
-        </StyleMap>"""
-        self.begin_folder = """
-            <Folder>
-                <name>{} Magnitudes</name>"""
-        self.placemark = """
-                <Placemark>
-                    <name>{} - {}</name>
-                    <visibility>0</visibility>
-                    <description>
-                        <![CDATA[
-                            <table width='300'>
-                                <tr>
-                                    <td>Yer</td>
-                                    <td>{}</td>
-                                </tr>
-                                <tr>
-                                    <td>Enlem</td>
-                                    <td>{}</td>
-                                </tr>
-                                <tr>
-                                    <td>Boylam</td>
-                                    <td>{}</td>
-                                </tr>
-                                <tr>
-                                    <td>Derinlik</td>
-                                    <td>{}</td>
-                                </tr>
-                                <tr>
-                                    <td>M</td>
-                                    <td>{}</td>
-                                </tr>
-                                <tr>
-                                    <td>Tarih-Saat</td>
-                                    <td>{}</td>
-                                </tr>
-                            </table>
-                        ]]>
-                    </description>
-                    <styleUrl>{}</styleUrl>
-                    <Point>
-                        <coordinates>{},{},0</coordinates>
-                        <drawOrder>1</drawOrder>
-                    </Point>
-                </Placemark>"""
-        self.end_folder = """
-        </Folder>"""
-        self.end_kml = """
-    </Document>
-</kml>"""
-    def Style(self):
+def outFile(file_name,data):
+    file = open(file_name,"w",encoding="utf-8")
+    file.write(data)
+    file.close()
+def last_day(year,month):
+    return str(calendar.monthrange(int(year),int(month))[1])
+def create_date_string(year, month, day, is_start=True):
+    date_string = f"{year}-{str(month).zfill(2)}-{str(day).zfill(2)}T"
+    time_suffix = "00:00:00.000Z" if is_start else "23:59:59.999Z"
+    return date_string + time_suffix
+now = date.today()
+toyear = now.year
+tomonth = now.month
+today = now.day
+ids = [ 'ZERO_TO_ONE' , 'ZERO_TO_ONE_HL', 'TWO', 'TWO_HL', 'THREE', 'THREE_HL', 'FOUR', 'FOUR_HL', 'FIVE', 'FIVE_HL', 'SIX', 'SIX_HL', 'SEVEN', 'SEVEN_HL', 'EIGHT', 'EIGHT_HL', 'NINE', 'NINE_HL']
+scales = ['0.2','0.29','0.3','0.39','0.5','0.59','0.7','0.79','0.8','0.89','0.9','0.99','1.0','1.09','2.0','2.09','3.0','3.09']
+colors = ['00ffffff', '00ffffff', '00ffffff', '00ffffff', 'ff0295f0', 'ff0295f0', 'ff00ff00', 'ff00ff00' , 'ffffaa00', 'ffffaa00', 'ff7f0000', 'ff7f0000', 'ff0000ff', 'ff0000ff', 'ff4d1c31', 'ff4d1c31', 'ff000000', 'ff000000']
+map_ids = ['0-1','0-1','2','2','3','3','4','4','5','5','6','6','7','7','8','8','9','9']
+table_data =  "<tr><td>{}</td><td>{}</td></tr>"
+cdata = """<![CDATA[<table width='300'><tr><td>Yer</td><td>{}</td></tr><tr><td>Enlem</td><td>{}</td></tr><tr><td>Boylam</td><td>{}</td></tr><tr><td>Derinlik</td><td>{}</td></tr><tr><td>M</td><td>{}</td></tr><tr><td>Tarih-Saat</td><td>{}</td></tr></table>]]>"""
+def _escape_cdata(text, encoding="utf-8"):
+    try:
+        if "&" in text:
+            text = text.replace("&", "&amp;")
+        # if "<" in text:
+            # text = text.replace("<", "&lt;")
+        # if ">" in text:
+            # text = text.replace(">", "&gt;")
+        return text
+    except TypeError:
+        raise TypeError(
+            "cannot serialize %r (type %s)" % (text, type(text).__name__)
+        )
+ET._escape_cdata = _escape_cdata
+def KmlCreate():
+     kml = ET.Element('kml', xmlns="http://www.opengis.net/kml/2.2")
+     return kml
+def DocumentCreate(element,visibility=None,name=None,open=None):
+    document = ET.SubElement(element, 'Document')
+    if visibility:
+        visibility_element = ET.SubElement(document,'visibility')
+        visibility_element.text = visibility
+    if name:
+        name_element = ET.SubElement(document,'name')
+        name_element.text = name
+    if open:
+        open_element = ET.SubElement(document,'open')
+        open_element.text = open
+    return document
+def FolderCreate(element,name=None):
+    folder = ET.SubElement(element,'Folder')
+    if name:
+        name_element = ET.SubElement(folder,'name')
+        name_element.text = name
+    return folder
+def create_placemark(doc_element, name, coordinates, description_text, placemark_id=None, placemark_visibility=None, placemark_styleUrl=None,point_Draworder=None):
+    # Placemark elementi oluştur
+    placemark = ET.SubElement(doc_element, 'Placemark')
+
+    # Placemark elementine id özelliği ekle (varsa)
+    if placemark_id:
+        placemark.set('id', str(placemark_id))
+    if placemark_visibility:
+        visibility_element = ET.SubElement(placemark, 'visibility')
+        visibility_element.text = placemark_visibility
+    if placemark_styleUrl:
+        styleUrl_element = ET.SubElement(placemark, 'styleUrl')
+        styleUrl_element.text = placemark_styleUrl
+    # Name elementi oluştur ve değeri ata
+    name_element = ET.SubElement(placemark, 'name')
+    name_element.text = name
+    # CDATA elementi oluştur ve değeri ata
+    description_element = ET.SubElement(placemark, 'description')
+    description_element.text=description_text
+
+    # Point elementi oluştur
+    point = ET.SubElement(placemark, 'Point')
+
+    # Coordinates elementi oluştur ve değeri ata
+    coordinates_element = ET.SubElement(point, 'coordinates')
+    coordinates_element.text = coordinates
+    if point_Draworder:
+        drawOrder_element = ET.SubElement(point, 'drawOrder')
+        drawOrder_element.text = point_Draworder
+    return placemark
+def create_style(doc_element, style_id, scale, color=None):
+    # Style elementi oluştur
+    style = ET.SubElement(doc_element, 'Style')
+    style.set('id', style_id)
+
+    # IconStyle elementi oluştur
+    icon_style = ET.SubElement(style, 'IconStyle')
+    # Icon elementi oluştur
+    icon = ET.SubElement(icon_style, 'Icon')
+    if color:
+        icon_color = ET.SubElement(icon_style, 'color')
+        icon_color.text = color
+    # Hata ayıklama amaçlı olarak icon elementine bir link ekleyelim
+    href = ET.SubElement(icon, 'href')
+    href.text = 'http://maps.google.com/mapfiles/kml/pal2/icon18.png'
+    # Scale elementi oluştur
+    scale_element = ET.SubElement(icon_style, 'scale')
+    scale_element.text = str(scale)
+
+    # LABELSTYLE elementi oluştur
+    labelstyle_element = ET.SubElement(style, 'LabelStyle')
+    labelstyle_color = ET.SubElement(labelstyle_element, 'color')
+    labelstyle_color.text = "00ffffff"
+
+    return style
+def create_style_map(doc_element, style_map_id, normal_style_url, highlight_style_url=None):
+    # StyleMap elementi oluştur
+    style_map = ET.SubElement(doc_element, 'StyleMap')
+    style_map.set('id', style_map_id)
+
+    # Pair elementi oluştur (normal durum)
+    pair_normal = ET.SubElement(style_map, 'Pair')
+    key_normal = ET.SubElement(pair_normal, 'key')
+    key_normal.text = 'normal'
+    style_url_normal = ET.SubElement(pair_normal, 'styleUrl')
+    style_url_normal.text = normal_style_url
+
+    # Pair elementi oluştur (highlight durum, varsa)
+    if highlight_style_url:
+        pair_highlight = ET.SubElement(style_map, 'Pair')
+        key_highlight = ET.SubElement(pair_highlight, 'key')
+        key_highlight.text = 'highlight'
+        style_url_highlight = ET.SubElement(pair_highlight, 'styleUrl')
+        style_url_highlight.text = highlight_style_url
+
+    return style_map
+
+def Style(sty):
         styles = [
             "#0-1",
             "#0-1",
@@ -300,63 +150,61 @@ class KmlCreate:
             "#9"
         ]
         for i in range(10):
-            if i >= self and self < i+1:
+            if i >= sty and sty < i+1:
                 return styles[i]
-        return styles[-1]
-    def ColumnCreator(self):
-        with open(self, 'r') as temp_f:
-            #get No of columns in each line
-            col_count = [len(l.split("\t")) for l in temp_f.readlines()]
-        ### Generate column names  (names will be 0, 1, 2, ..., maximum columns - 1)
-        column_names = [i for i in range(max(col_count))]
-        return column_names
-    def DataFrameExtract(self, columns):
-            return read_csv(self, delimiter="\t", header=None, names=columns)
-    def Convert(self):
-        self[4] = self[4].astype(float)
-        self[3] = self[3].astype(float)
-        mag = self[4]
-        mags = []
-        for i in range(10):
-            tmp = mag.between(i, i + 0.9)
-            mags.append(self[tmp].reset_index())
-        return mags
-    def Create(self):
-        join_list = []
-        join_list.append(KmlCreate().begin_kml)
-        for i in range(10):
-            count = self[i].shape[0]
-            if count == 0:
-                continue
-            join_list.append(KmlCreate().begin_folder.format(i))
-            STYLE = KmlCreate.Style(i)
-            for j in range(count):
-                """
-                    Column Order
-                    0 = Date
-                    1 = Latitude
-                    2 = Longitude
-                    3 = Depth
-                    4 = Magnitude
-                    5 = Location
-                """
-                join_list.append(KmlCreate().placemark.format(
-                    self[i][5][j],
-                    self[i][4][j],
-                    self[i][5][j],
-                    self[i][1][j],
-                    self[i][2][j],
-                    self[i][3][j],
-                    self[i][4][j],
-                    self[i][0][j],
-                    STYLE,
-                    self[i][2][j],
-                    self[i][1][j],
-                ))
-            join_list.append(KmlCreate().end_folder)
-        join_list.append(KmlCreate().end_kml)
-        return "\n".join(join_list)
-    def Out(self):
-        columns = KmlCreate.ColumnCreator(self)
-        df = KmlCreate.Convert(KmlCreate.DataFrameExtract(self, columns))
-        return '\n'.join(KmlCreate.Create(df))
+
+def ColumnCreator(data):
+    with open(data, 'r') as temp_f:
+        #get No of columns in each line
+        col_count = [len(l.split("\t")) for l in temp_f.readlines()]
+    ### Generate column names  (names will be 0, 1, 2, ..., maximum columns - 1)
+    column_names = [i for i in range(max(col_count))]
+    return column_names
+
+def DataFrameExtract(data, columns):
+    return read_csv(data, delimiter="\t", header=None, names=columns)
+def Convert(data):
+    data[4] = data[4].astype(float) #Mag
+    data[3] = data[3].astype(float) #Depth
+    mag = data[4]
+    mags = []
+    for i in range(10): # Magnitude Sorter
+        tmp = mag.between(i, i + 0.9)
+        mags.append(data[tmp].reset_index())
+    return mags
+def Create(data):
+    kml = KmlCreate()
+    document = DocumentCreate(kml,visibility="0",open="0")
+    for i in range(0,len(ids)):
+        if i<4:
+            create_style(document,str(ids[i]),scales[i]) #büyüklük 3 den küçükse color ekleme
+        else:
+            create_style(document,str(ids[i]),scales[i],colors[i])
+    for i in range(0,len(ids),2):
+        create_style_map(document,str(map_ids[i]),f"#{str(ids[i])}",f"#{str(ids[i+1])}")
+    for i in range(10):
+        count = data[i].shape[0] # İndex Count control
+        if count == 0:
+            continue
+        folder_element = FolderCreate(document,name=f"{str(i)} Magnitudes")
+        STYLE = Style(i)
+        for j in range(count):
+            datehour = data[i][0][j]
+            latitude = data[i][1][j]
+            longitude = data[i][2][j]
+            depth = data[i][3][j]
+            magnitude = data[i][4][j]
+            location = data[i][5][j]
+            create_placemark(folder_element,
+                             str(f"{location} - {magnitude}"),
+                             str(f"{longitude},{latitude},0"),
+                             str(f"{cdata.format(location,latitude,longitude,depth,magnitude,datehour)}"),
+                             placemark_visibility="0",
+                             placemark_styleUrl=str(STYLE),
+                             point_Draworder="1"
+                             )
+
+    tree_str = minidom.parseString(ET.tostring(kml)).toprettyxml(indent="    ")
+
+    return tree_str
+        

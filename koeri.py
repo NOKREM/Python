@@ -1,7 +1,8 @@
-from urllib.request import urlopen
+import requests
+from lxml import html
 import pandas as pd
 import re
-from Kml import KmlCreate
+from kml import *
 import xml.etree.ElementTree as ET
 import sys
 from bs4 import BeautifulSoup
@@ -15,28 +16,44 @@ class KOERI:
         self.xml_tree = "earhquake"
         self.codepage = "cp1254"
     def lasteq():
-        url =KOERI().lastquake_url
-        body = urlopen(url).read().decode(KOERI().codepage)
-        match = re.findall('(\n[0-9]{3}.*İlksel\r|\n[0-9]{3}.*REVIZE.*\r)', body)
-        data = []
-        for i in match: data.append(i.split())
-        for i in range(len(data)):
-            data[i][0] += "T" + data[i][1]
-            del data[i][7]
-            del data[i][5]
-            del data[i][1]
-            for j in range(5,len(data[i])):
-                data[i][5] += data[i][j]
-            for j in range(6,len(data[i])):
-                try:
-                    del data[i][j]
-                except:
-                    del data[i][6]
-        return KmlCreate.Create(KmlCreate.Convert(pd.DataFrame(data)))
+        # Veri girişi
+        veri = requests.get("http://www.koeri.boun.edu.tr/scripts/lst0.asp") ; veri.encoding = "cp1254"
+        # Satırları böl
+        satirlar = str(veri.text).strip().split('\n')
+        pmag = []
+        main_data = []
+        # Her bir satırı işle
+        for satir in satirlar:
+            # Düzenli ifade kullanarak ayrıştırma
+            eslesme = re.match(r'(\d{4}.\d{2}.\d{2} \d{2}:\d{2}:\d{2})\s*(\d+\.\d+)\s*(\d+\.\d+)\s*(\d+\.\d+)\s*(-\.-|\d+\.\d+)\s*(-\.-|\d+\.\d+)\s*(-\.-|\d+\.\d+)\s*(.*)', satir)    
+            if eslesme:
+                date = eslesme.group(1)
+                lat = eslesme.group(2)
+                long = eslesme.group(3)
+                depth = eslesme.group(4)
+                md = eslesme.group(5)
+                ml = eslesme.group(6)
+                mw = eslesme.group(7)
+                if mw == "-.-":
+                    pmag = ml
+                else:
+                    pmag = mw
+                loc = eslesme.group(8).split()
+                if loc[-1] == "İlksel":
+                    del loc[-1]
+                else:
+                    del loc[-1]
+                    del loc[-1]
+                    del loc[-1]
+                loc = " ".join(loc)
+                main_data += [[date,lat,long,depth,pmag,loc]]
+        df = pd.DataFrame(main_data) 
+        return Create(Convert(pd.DataFrame(df)))
     def month_print(year,month):
         url = KOERI().monthprint_url.format(year,month)
-        body = urlopen(url).read().decode(KOERI().codepage)
-        tree = ET.fromstring(body)
+        body = requests.get(url)
+        body.encoding = "cp1254"
+        tree = ET.fromstring(body.text)
         data = []
         myorder = [0, 1, 3, 4, 6, 5, 2]
         for items in tree.findall(KOERI().xml_tree):
@@ -44,14 +61,14 @@ class KOERI:
             arr[0] = re.sub(' ','\t',arr[0])
             data.append('\t'.join(arr))
         for i in range(len(data)):
-            data[i]=re.sub(' ','',data[i]).split('\t')
+            data[i]=data[i].split('\t')
             data[i] = [data[i][j] for j in myorder]
         for i in range(len(data)):
-            data[i][0] += "T"+data[i][1]
+            data[i][0] += " "+data[i][1]
             if data[i][5] == "-.-":
                 data[i][5] = 0.0
             del data[i][1]
-        return KmlCreate.Create(KmlCreate.Convert(pd.DataFrame(data)))
+        return Create(Convert(pd.DataFrame(data)))
     def zeqdb(params):
         parse_params = params.split(" ")
         begin_date = parse_params[0].split("-")
@@ -76,8 +93,9 @@ class KOERI:
             end_year, end_month, end_day,
             begin_mag, end_mag
         )
-        data = urlopen(url+params).read().decode(KOERI().codepage)
-        html = BeautifulSoup(data, "lxml").decode(KOERI().codepage)
+        data = requests.get(url+params)
+        data.encoding = "cp1254"
+        html = BeautifulSoup(data.text, "lxml").decode(KOERI().codepage)
         match = re.findall("[0-9]{6}\t.*",html)
         for i in range(len(match)):
             match[i] = match[i].split("\t")
@@ -88,8 +106,7 @@ class KOERI:
             del match[i][0]
             match[i][0]+="T"+match[i][1]
             del match[i][1]
-        return KmlCreate.Create(KmlCreate.Convert(pd.DataFrame(match)))
-
+        return Create(Convert(pd.DataFrame(match)))
     def all_month_print():
         for i in range(2003, 2024):
             for j in range(1, 13):
@@ -106,11 +123,15 @@ class KOERI:
             file.write(KOERI.zeqdb(str(i)+"-01-01 "+str(i) + "-12-31 "+"28-50 "+"18-50 "+"0-9 "+"0-500"))
             file.close()
 if sys.argv[1] == "month_print":
-    print(KOERI.month_print(sys.argv[2],sys.argv[3]))
+    outFile(str(sys.argv[2])+"-"+sys.argv[3]+".kml",KOERI.month_print(sys.argv[2],sys.argv[3]))
 elif sys.argv[1] == "lasteq":
-    print(KOERI.lasteq())
+    outFile("lasteq.kml",KOERI.lasteq())
 elif sys.argv[1] == "zeqdb":
-    print(KOERI.zeqdb(sys.argv[2]))
+    outFile("zeqdb.kml",KOERI.zeqdb(sys.argv[2]))
+elif sys.argv[1] == "zeqdb_monthprint":
+    year = sys.argv[2]
+    month = sys.argv[3]
+    outFile(str(year)+"-"+str(month)+"_ZEQDB.kml",KOERI.zeqdb(str(year)+"-"+str(month)+"-01 "+str(year)+"-"+str(month)+"-"+str(last_day(year,month))+" 28.50-50.00 18.00-50.00 0-9 0-500"))
 elif sys.argv[1] == "allyear":
     KOERI.all_month_print()
 elif sys.argv[1] == "allzeqdb":
