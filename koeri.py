@@ -1,143 +1,229 @@
 import requests
-from lxml import html
 import pandas as pd
 import re
-from kml import *
 import xml.etree.ElementTree as ET
 import sys
-from bs4 import BeautifulSoup
+import calendar
+from datetime import date,datetime
+from typing import List, Optional, Union
+import logging
+from Kml2 import KmlGenerator
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class KOERI:
-    def __init__(self):
-        self.lastquake_url = "http://www.koeri.boun.edu.tr/scripts/lst9.asp"
-        self.monthprint_url = "http://udim.koeri.boun.edu.tr/zeqmap/xmlt/{}{}.xml"
-        self.zeqdb_url = "http://www.koeri.boun.edu.tr/sismo/zeqdb/submitRecSearchT.asp?"
-        self.zeqdb_params = "bYear={}&bMont={}&bDay={}&eYear={}&eMont={}&eDay={}&EnMin={}&EnMax={}&BoyMin={}&BoyMax={}&MAGMin={}&MAGMax={}&DerMin={}&DerMax={}&Tip=DepremDeprem&ofName={}{}{}_{}{}{}_{}_{}.txt"
-        self.xml_tree = "earhquake"
-        self.codepage = "cp1254"
-    def lasteq():
-        # Veri girişi
-        veri = requests.get("http://www.koeri.boun.edu.tr/scripts/lst0.asp") ; veri.encoding = "cp1254"
-        # Satırları böl
-        satirlar = str(veri.text).strip().split('\n')
-        pmag = []
+    """Class for handling Kandilli Observatory and Earthquake Research Institute (KOERI) data."""
+    
+    # Class constants for URLs and parameters
+    LASTQUAKE_URL = "http://www.koeri.boun.edu.tr/scripts/lst0.asp"
+    MONTHPRINT_URL_TEMPLATE = "http://udim.koeri.boun.edu.tr/zeqmap/xmlt/{}{}.xml"
+    XML_TREE_TAG = "earhquake"
+    CODEPAGE = "cp1254"
+    
+    @classmethod
+    def last_day(year: int, month: int) -> str:
+        """Get the last day of the given month and year."""
+        return str(calendar.monthrange(int(year), int(month))[1])
+    
+    @classmethod
+    def fetch_url(cls, url: str, encoding: Optional[str] = None) -> str:
+        """Fetch URL content with error handling."""
+        try:
+            response = requests.get(url, timeout=30)
+            if encoding:
+                response.encoding = encoding
+            response.raise_for_status()
+            return response.text
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error fetching URL {url}: {e}")
+            return ""
+    
+    @classmethod
+    def lasteq(cls):
+        """Fetch the latest earthquake data."""
+        # Get data from KOERI website
+        content = cls.fetch_url(cls.LASTQUAKE_URL, cls.CODEPAGE)
+        if not content:
+            return pd.DataFrame()
+        # Split into lines
+        lines = content.strip().split('\n')
         main_data = []
-        # Her bir satırı işle
-        for satir in satirlar:
-            # Düzenli ifade kullanarak ayrıştırma
-            eslesme = re.match(r'(\d{4}.\d{2}.\d{2} \d{2}:\d{2}:\d{2})\s*(\d+\.\d+)\s*(\d+\.\d+)\s*(\d+\.\d+)\s*(-\.-|\d+\.\d+)\s*(-\.-|\d+\.\d+)\s*(-\.-|\d+\.\d+)\s*(.*)', satir)    
-            if eslesme:
-                date = eslesme.group(1)
-                lat = eslesme.group(2)
-                long = eslesme.group(3)
-                depth = eslesme.group(4)
-                md = eslesme.group(5)
-                ml = eslesme.group(6)
-                mw = eslesme.group(7)
-                if mw == "-.-":
-                    pmag = ml
-                else:
-                    pmag = mw
-                loc = eslesme.group(8).split()
-                if loc[-1] == "İlksel":
-                    del loc[-1]
-                else:
-                    del loc[-1]
-                    del loc[-1]
-                    del loc[-1]
-                loc = " ".join(loc)
-                main_data += [[date,lat,long,depth,pmag,loc]]
-        df = pd.DataFrame(main_data) 
-        return Create(Convert(pd.DataFrame(df)))
-    def month_print(year,month):
-        url = KOERI().monthprint_url.format(year,month)
-        body = requests.get(url)
-        body.encoding = "cp1254"
-        tree = ET.fromstring(body.text)
-        data = []
-        myorder = [0, 1, 3, 4, 6, 5, 2]
-        for items in tree.findall(KOERI().xml_tree):
-            arr = list(items.attrib.values())
-            arr[0] = re.sub(' ','\t',arr[0])
-            data.append('\t'.join(arr))
-        for i in range(len(data)):
-            data[i]=data[i].split('\t')
-            data[i] = [data[i][j] for j in myorder]
-        for i in range(len(data)):
-            data[i][0] += " "+data[i][1]
-            if data[i][5] == "-.-":
-                data[i][5] = 0.0
-            del data[i][1]
-        return Create(Convert(pd.DataFrame(data)))
-    def zeqdb(params):
-        parse_params = params.split(" ")
-        begin_date = parse_params[0].split("-")
-        end_date = parse_params[1].split("-")
-        latitude = parse_params[2].split("-")
-        longitude = parse_params[3].split("-")
-        magnitude = parse_params[4].split("-")
-        depth = parse_params[5].split("-")
-        begin_year = begin_date[0] ; begin_month = begin_date[1] ; begin_day = begin_date[2]
-        end_year = end_date[0] ; end_month = end_date[1] ; end_day = end_date[2]
-        begin_lat = latitude[0] ; end_lat = latitude[1]
-        begin_lon = longitude[0] ; end_lon = longitude[1]
-        begin_mag = magnitude[0] ; end_mag = magnitude[1]
-        begin_depth = depth[0] ; end_depth = depth[1]
-        url = KOERI().zeqdb_url
-        params = KOERI().zeqdb_params.format(
-            begin_year,begin_month,begin_day,
-            end_year, end_month, end_day,
-            begin_lat, end_lat, begin_lon, end_lon,
-            begin_mag, end_mag, begin_depth, end_depth,
-            begin_year, begin_month, begin_day,
-            end_year, end_month, end_day,
-            begin_mag, end_mag
-        )
-        data = requests.get(url+params)
-        data.encoding = "cp1254"
-        html = BeautifulSoup(data.text, "lxml").decode(KOERI().codepage)
-        match = re.findall("[0-9]{6}\t.*",html)
-        for i in range(len(match)):
-            match[i] = match[i].split("\t")
-        for i in range(len(match)):
-            for j in range(13,7,-1):
-                del match[i][j]
-            del match[i][1]
-            del match[i][0]
-            match[i][0]+="T"+match[i][1]
-            del match[i][1]
-        return Create(Convert(pd.DataFrame(match)))
-    def all_month_print():
-        for i in range(2003, 2024):
-            for j in range(1, 13):
-                file = open(str(i) + "_"+str(j) + ".kml", "w")
-                if j < 10:
-                    file.write(KOERI.month_print(i, "0"+str(j)))
-                    file.close()
-                else:
-                    file.write(KOERI.month_print(i, j))
-                    file.close()
-    def allzeqdb():
-        for i in range(1900, 2013):
-            file = open(str(i)+"_ZEQDB.kml","w")
-            file.write(KOERI.zeqdb(str(i)+"-01-01 "+str(i) + "-12-31 "+"28-50 "+"18-50 "+"0-9 "+"0-500"))
-            file.close()
-if sys.argv[1] == "month_print":
-    outFile(str(sys.argv[2])+"-"+sys.argv[3]+".kml",KOERI.month_print(sys.argv[2],sys.argv[3]))
-elif sys.argv[1] == "lasteq":
-    outFile("lasteq.kml",KOERI.lasteq())
-elif sys.argv[1] == "zeqdb":
-    outFile("zeqdb.kml",KOERI.zeqdb(sys.argv[2]))
-elif sys.argv[1] == "zeqdb_monthprint":
-    year = sys.argv[2]
-    month = sys.argv[3]
-    outFile(str(year)+"-"+str(month)+"_ZEQDB.kml",KOERI.zeqdb(str(year)+"-"+str(month)+"-01 "+str(year)+"-"+str(month)+"-"+str(last_day(year,month))+" 28.50-50.00 18.00-50.00 0-9 0-500"))
-elif sys.argv[1] == "allyear":
-    KOERI.all_month_print()
-elif sys.argv[1] == "allzeqdb":
-    KOERI.allzeqdb()
-"""
-    ZEQDB
-    For Example
-    koeri.py zeqdb "2023-01-01 2023-01-31 28.50-50.00 18.00-50.00 0-9 0-500"
-"""
+        
+        # Process each line
+        pattern = r'(\d{4}.\d{2}.\d{2} \d{2}:\d{2}:\d{2})\s*(\d+\.\d+)\s*(\d+\.\d+)\s*(\d+\.\d+)\s*(-\.-|\d+\.\d+)\s*(-\.-|\d+\.\d+)\s*(-\.-|\d+\.\d+)\s*(.*)'
+        compiled_pattern = re.compile(pattern)
+        
+        for line in lines:
+            match = compiled_pattern.search(line)
+            if match:
+                date = match.group(1)
+                lat = match.group(2)
+                long = match.group(3)
+                depth = match.group(4)
+                md = match.group(5)
+                ml = match.group(6)
+                mw = match.group(7)
+                
+                # Determine magnitude
+                pmag = ml if mw == "-.-" else mw
+                
+                # Process location
+                loc = match.group(8).split()
+                if loc and loc[-1] == "İlksel":
+                    loc.pop()
+                elif len(loc) >= 3:
+                    loc = loc[:-3]  # Remove last three elements
+                    
+                location = " ".join(loc)
+                main_data.append([date, lat, long, depth, pmag, location])
+        # Create DataFrame)
+        return main_data
+
+    @classmethod
+    def month_print(cls, year: Union[str, int], month: Union[str, int]) -> List[List[str]]:
+        """Get earthquake data for a specific month and year."""
+        # Format URL
+        month=datetime(int(year),int(month),1).strftime('%m')
+        url = cls.MONTHPRINT_URL_TEMPLATE.format(year,month)
+        # Get XML content
+        content = cls.fetch_url(url, cls.CODEPAGE)
+        if not content:
+            return []
+        try:
+            # Parse XML
+            tree = ET.fromstring(content)
+            data = []
+            
+            # Column order mapping
+            column_order = [0, 1, 3, 4, 6, 5, 2]
+            
+            # Process each earthquake entry
+            for item in tree.findall(cls.XML_TREE_TAG):
+                # Get attributes as list
+                attrs = list(item.attrib.values())
+                
+                # Format date
+                attrs[0] = re.sub(' ', '\t', attrs[0])
+                
+                # Join values with tab
+                data.append('\t'.join(attrs))
+            
+            # Process each data row
+            processed_data = []
+            for row in data:
+                # Split by tab
+                row_items = row.split('\t')
+                
+                # Reorder columns
+                ordered_items = [row_items[i] for i in column_order if i < len(row_items)]
+                
+                # Combine date and time
+                ordered_items[0] += " " + ordered_items[1]
+                
+                # Replace missing magnitude
+                if ordered_items[5] == "-.-":
+                    ordered_items[5] = "0.0"
+                    
+                # Remove redundant time
+                del ordered_items[1]
+                
+                processed_data.append(ordered_items)
+                
+            return processed_data
+            
+        except Exception as e:
+            logger.error(f"Error processing XML for {year}-{month}: {e}")
+            return []
+
+    @classmethod
+    def generate_kml(cls, data, output_file: str = None) -> str:
+        """Generate KML from earthquake data."""
+        try:
+            # Initialize KML generator
+            generator = KmlGenerator()
+            
+            # Process data and create KML
+            data_frames = generator.process_data(data)
+            kml_content = generator.create_kml(data_frames)
+            
+            # Save to file if specified
+            if output_file:
+                with open(output_file, "w", encoding="utf-8") as f:
+                    f.write(kml_content)
+                logger.info(f"KML saved to {output_file}")
+                
+            return kml_content
+            
+        except Exception as e:
+            logger.error(f"Error generating KML: {e}")
+            return ""
+
+    @classmethod
+    def all_month_print(cls, start_year: int = 2003, end_year: int = None) -> None:
+        """Generate KML files for all months in the specified year range."""
+        # Default end year to current year if not specified
+        if end_year is None:
+            end_year = date.today().year
+            
+        for year in range(start_year, end_year + 1):
+            for month in range(1, 13):
+                # Skip future months
+                current_date = date.today()
+                if year > current_date.year or (year == current_date.year and month > current_date.month):
+                    continue
+                    
+                # Format month
+                month_str = f"0{month}" if month < 10 else str(month)
+                
+                # Output filename
+                output_file = f"{year}_{month_str}.kml"
+                
+                try:
+                    # Get data and generate KML
+                    data = cls.month_print(year, month_str)
+                    if data:
+                        cls.generate_kml(data, output_file)
+                        
+                except Exception as e:
+                    logger.error(f"Error processing {year}-{month_str}: {e}")
+
+def main():
+    """Main function to handle command-line arguments."""
+    if len(sys.argv) < 2:
+        print("Usage:")
+        print("  month_print <year> <month>: Get earthquakes for specific month")
+        print("  lasteq: Get latest earthquakes")
+        print("  allyear [start_year] [end_year]: Generate KMLs for all months")
+        return
+
+    command = sys.argv[1]
+    
+    try:
+        if command == "month_print" and len(sys.argv) >= 4:
+            year, month = sys.argv[2], sys.argv[3]
+            data = KOERI.month_print(year, month)
+            if data:
+                output_file = f"{year}-{month}.kml"
+                KOERI.generate_kml(data, output_file)
+                
+        elif command == "lasteq":
+            data = KOERI.lasteq()
+            if data:
+                KOERI.generate_kml(data, "lasteq.kml")
+                
+        elif command == "allyear":
+            start_year = int(sys.argv[2]) if len(sys.argv) >= 3 else 2003
+            end_year = int(sys.argv[3]) if len(sys.argv) >= 4 else None
+            KOERI.all_month_print(start_year, end_year)
+        
+        else:
+            print(f"Unknown command: {command}")
+            
+    except Exception as e:
+        logger.error(f"Error executing command {command}: {e}")
+
+
+if __name__ == "__main__":
+    main()
